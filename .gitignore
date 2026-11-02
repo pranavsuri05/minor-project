@@ -1,0 +1,33 @@
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local data: databases, vector store, logs, generated reports
+data/*
+!data/.gitkeep
+chroma_db/
+logs/
+outputs/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.log
+
+# Documents (uploaded or generated PDFs and Word files can be private)
+*.pdf
+*.docx
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
