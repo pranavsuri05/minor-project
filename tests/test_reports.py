@@ -55,3 +55,17 @@ def test_docx_export_is_valid_and_has_headings():
     assert "Abstract" in headings and "3. Literature Review" in headings
     bullets = [p for p in document.paragraphs if p.style.name == "List Bullet"]
     assert len(bullets) == 2
+
+
+def test_pdf_falls_back_to_helvetica_when_no_ttf_fonts_exist(monkeypatch):
+    """On Linux the macOS font paths do not exist; export must still work (this is the cloud code path)."""
+    import services.report_export as export
+
+    monkeypatch.setattr(export, "_BODY_FONT_CANDIDATES", [])
+    data = export.build_pdf(MARKDOWN + "\nAccented text: Müller, naïve, café → done.", "Fallback Test", "2026-11-02")
+    pdf = fitz.open(stream=data, filetype="pdf")
+    text = "".join(page.get_text() for page in pdf)
+    fonts = {font[3] for page in pdf for font in page.get_fonts()}
+    pdf.close()
+    assert data.startswith(b"%PDF-") and "Literature Review" in text and "Müller" in text
+    assert any("Helvetica" in name for name in fonts)

@@ -96,8 +96,10 @@ class LLMClient:
 
     def _sanitize(self, message: str) -> str:
         """Remove the API key from any text that may reach the UI or the log."""
-        key = self.settings.gemini_api_key
-        return message.replace(key, "<redacted>") if key else message
+        for key in {self.settings.gemini_api_key, self.settings.openai_api_key}:
+            if key:
+                message = message.replace(key, "<redacted>")
+        return message
 
     def _complete_native(self, task: str, system: str, user: str) -> str:
         """Gemini through Google's official google-genai SDK (LLM_PROVIDER=gemini_native)."""
@@ -165,7 +167,7 @@ class LLMClient:
             raise LLMError("Could not reach the LLM provider. Check your network connection.") from exc
         except Exception as exc:  # noqa: BLE001 - surface any provider failure with context
             logger.exception("LLM call failed task=%s", task)
-            raise LLMError(f"LLM call failed during '{task}': {exc}") from exc
+            raise LLMError(self._sanitize(f"LLM call failed during '{task}': {exc}")) from exc
         text = reply.content if isinstance(reply.content, str) else "".join(
             part.get("text", "") if isinstance(part, dict) else str(part) for part in reply.content
         )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
@@ -23,8 +23,25 @@ PROVIDER_DEFAULT_MODELS = {
 }
 
 
+def _secret(name: str) -> str:
+    """Read a top-level Streamlit secret (Streamlit Community Cloud, or .streamlit/secrets.toml locally).
+
+    Returns "" when there is no secrets file, the key is missing, or the code runs outside Streamlit.
+    """
+    try:
+        import streamlit as st
+
+        value = st.secrets.get(name)
+    except Exception:  # noqa: BLE001 - no secrets configured is a normal situation
+        return ""
+    if value is None or hasattr(value, "keys"):  # ignore missing keys and nested tables
+        return ""
+    return str(value).strip()
+
+
 def _env(name: str, default: str = "") -> str:
-    return os.getenv(name, default).strip()
+    """Setting lookup order: environment variable (including .env), then Streamlit secrets, then the default."""
+    return os.getenv(name, "").strip() or _secret(name) or default
 
 
 def _env_int(name: str, default: int) -> int:
@@ -39,8 +56,8 @@ def _env_int(name: str, default: int) -> int:
 @dataclass(frozen=True)
 class Settings:
     llm_provider: str
-    openai_api_key: str
-    gemini_api_key: str
+    openai_api_key: str = field(repr=False)  # repr=False keeps keys out of logs and tracebacks
+    gemini_api_key: str = field(repr=False)
     llm_model: str
     llm_timeout_s: int
     llm_max_retries: int
@@ -74,17 +91,17 @@ class Settings:
         key_name = "OPENAI_API_KEY" if self.llm_provider == "openai" else "GEMINI_API_KEY"
         if self.llm_provider not in PROVIDER_DEFAULT_MODELS:
             return (
-                f"Unknown LLM_PROVIDER '{self.llm_provider}'. Use 'openai' or 'gemini' in your .env file."
+                f"Unknown LLM_PROVIDER '{self.llm_provider}'. Use 'gemini_native', 'gemini' or 'openai'."
             )
         return (
-            f"No LLM API key is configured for provider '{self.llm_provider}'. "
-            f"Copy .env.example to .env and set {key_name}. The app can still ingest PDFs, "
+            f"No LLM API key is configured for provider '{self.llm_provider}'. Set {key_name} in a local .env "
+            "file (copy .env.example) or in the Streamlit Community Cloud secrets. The app can still ingest PDFs, "
             "but research reports require an LLM."
         )
 
 
 def build_settings(root: Path = ROOT_DIR) -> Settings:
-    provider = _env("LLM_PROVIDER", "gemini").lower()
+    provider = _env("LLM_PROVIDER", "gemini_native").lower()
     data_dir = root / "data"
     return Settings(
         llm_provider=provider,

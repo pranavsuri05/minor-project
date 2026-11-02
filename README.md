@@ -117,6 +117,26 @@ model downloads. The end-to-end tests still parse real PDFs and write to a real 
 - **The quality review is LLM-assisted and not exhaustive.** In live testing it once passed a report containing a
   wrongly expanded abbreviation. Treat the quality score as a signal, not a guarantee.
 
+## Deploying on Streamlit Community Cloud
+
+1. Push this repository to GitHub, then create a new app on [share.streamlit.io](https://share.streamlit.io) with
+   main file `app.py`. In **Advanced settings**, choose Python 3.12 (3.11 or newer is required).
+2. In **Advanced settings → Secrets**, enter (TOML format):
+
+   ```toml
+   GEMINI_API_KEY = "your-gemini-api-key"
+
+   # Optional. These are already the defaults:
+   # LLM_PROVIDER = "gemini_native"
+   # LLM_MODEL = "gemini-3.5-flash-lite"
+   ```
+
+   Settings are read from environment variables and `.env` first (local development), then from Streamlit secrets.
+   Never commit `.env` or `.streamlit/secrets.toml`; both are in `.gitignore`.
+3. Storage on Community Cloud is **temporary**. The SQLite history, the ChromaDB index and uploaded documents are
+   reset when the app restarts or is redeployed, so download any report you want to keep.
+4. The first research run downloads the embedding model (about 90 MB), so it is slower than later runs.
+
 ## Acknowledgements
 
 This project is built on open-source software and public services:
